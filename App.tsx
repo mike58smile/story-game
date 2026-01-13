@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, ChatMessage, INITIAL_CHAR_LIMIT, CHAR_DECREMENT, SCENARIOS, TEXTS, Language, Difficulty } from './types';
 import { generateStoryTurn, generateSceneImage } from './services/gemini';
 import { soundSystem } from './services/sound';
-import { testElevenLabs, narrateGameText, stopNarration, isElevenLabsConfigured } from './services/elevenlabs';
+import { testElevenLabs, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured } from './services/elevenlabs';
 import TerminalInput from './components/TerminalInput';
 import GameDisplay from './components/GameDisplay';
 import StatusPanel from './components/StatusPanel';
@@ -29,6 +29,7 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [ttsTestStatus, setTtsTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [sfxTestStatus, setSfxTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [narrationEnabled, setNarrationEnabled] = useState(true);
   const t = TEXTS[gameState.language];
 
@@ -633,6 +634,41 @@ const App: React.FC = () => {
                     : ttsTestStatus === 'error'
                     ? '✗ Test Failed'
                     : '▶ Test Text-to-Speech'}
+                </button>
+
+                {/* Sound Effects Test Button */}
+                <button
+                  onClick={async () => {
+                    if (!isElevenLabsConfigured()) {
+                      alert('ElevenLabs API key not configured. Set ELEVENLABS_API_KEY in your environment.');
+                      return;
+                    }
+                    setSfxTestStatus('testing');
+                    const success = await testSoundEffects();
+                    setSfxTestStatus(success ? 'success' : 'error');
+                  }}
+                  disabled={sfxTestStatus === 'testing' || !isElevenLabsConfigured()}
+                  className={`w-full px-4 py-2 border font-mono text-xs transition-all ${
+                    !isElevenLabsConfigured()
+                      ? 'border-zinc-700 text-zinc-600 cursor-not-allowed'
+                      : sfxTestStatus === 'testing' 
+                      ? 'border-yellow-500 text-yellow-500 cursor-wait'
+                      : sfxTestStatus === 'success'
+                      ? 'border-green-500 text-green-500'
+                      : sfxTestStatus === 'error'
+                      ? 'border-red-500 text-red-500'
+                      : 'border-purple-500 text-purple-500 hover:bg-purple-900/20'
+                  }`}
+                >
+                  {!isElevenLabsConfigured()
+                    ? '⚠ API Key Not Set'
+                    : sfxTestStatus === 'testing' 
+                    ? '⏳ Generating...' 
+                    : sfxTestStatus === 'success'
+                    ? '✓ SFX Test Passed!'
+                    : sfxTestStatus === 'error'
+                    ? '✗ SFX Test Failed'
+                    : '🎵 Test Sound Effects'}
                 </button>
                 
                 {!isElevenLabsConfigured() && (
