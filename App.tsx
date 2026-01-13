@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, ChatMessage, INITIAL_CHAR_LIMIT, CHAR_DECREMENT, SCENARIOS, TEXTS, Language, Difficulty } from './types';
 import { generateStoryTurn, generateSceneImage } from './services/gemini';
 import { soundSystem } from './services/sound';
-import { testElevenLabs, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured, playSoundEffect } from './services/elevenlabs';
+import { testElevenLabs, testOpenAI, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured, isOpenAIConfigured, isTTSConfigured, playSoundEffect, setTTSProvider, getTTSProvider, TTSProvider } from './services/elevenlabs';
 import TerminalInput from './components/TerminalInput';
 import GameDisplay from './components/GameDisplay';
 import StatusPanel from './components/StatusPanel';
@@ -30,8 +30,10 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [ttsTestStatus, setTtsTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [openaiTestStatus, setOpenaiTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [sfxTestStatus, setSfxTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [narrationEnabled, setNarrationEnabled] = useState(true);
+  const [ttsProvider, setTtsProviderState] = useState<TTSProvider>('elevenlabs');
   const [musicVolume, setMusicVolume] = useState(0.3);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const t = TEXTS[gameState.language];
@@ -657,10 +659,10 @@ const App: React.FC = () => {
                 {t.initiate}
               </button>
 
-              {/* ElevenLabs TTS Section */}
+              {/* Voice Narration Section */}
               <div className="w-full border border-zinc-800 bg-zinc-900/50 p-4 rounded-sm space-y-3 backdrop-blur-sm shadow-lg">
                 <h3 className="text-xs font-mono tracking-widest text-blue-500 border-b border-zinc-800 pb-2">
-                  🔊 Voice Narration {isElevenLabsConfigured() ? '(ElevenLabs)' : '(Not Configured)'}
+                  🔊 Voice Narration
                 </h3>
                 
                 {/* Narration Toggle */}
@@ -678,11 +680,44 @@ const App: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Test Button */}
+                {/* TTS Provider Selection */}
+                <div className="space-y-2">
+                  <span className="text-xs font-mono text-gray-400">TTS Provider</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setTtsProviderState('elevenlabs');
+                        setTTSProvider('elevenlabs');
+                      }}
+                      className={`flex-1 px-3 py-2 border font-mono text-xs transition-all ${
+                        ttsProvider === 'elevenlabs'
+                          ? 'border-blue-500 text-blue-500 bg-blue-900/20'
+                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'
+                      }`}
+                    >
+                      ElevenLabs {isElevenLabsConfigured() ? '✓' : ''}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTtsProviderState('openai');
+                        setTTSProvider('openai');
+                      }}
+                      className={`flex-1 px-3 py-2 border font-mono text-xs transition-all ${
+                        ttsProvider === 'openai'
+                          ? 'border-green-500 text-green-500 bg-green-900/20'
+                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'
+                      }`}
+                    >
+                      OpenAI {isOpenAIConfigured() ? '✓' : ''}
+                    </button>
+                  </div>
+                </div>
+
+                {/* ElevenLabs Test Button */}
                 <button
                   onClick={async () => {
                     if (!isElevenLabsConfigured()) {
-                      alert('ElevenLabs API key not configured. Set ELEVENLABS_API_KEY in your environment.');
+                      alert('ElevenLabs API key not configured. Set ELEVENLABS_API_KEY in your .env file.');
                       return;
                     }
                     setTtsTestStatus('testing');
@@ -703,21 +738,56 @@ const App: React.FC = () => {
                   }`}
                 >
                   {!isElevenLabsConfigured()
-                    ? '⚠ API Key Not Set'
+                    ? '⚠ ElevenLabs Key Not Set'
                     : ttsTestStatus === 'testing' 
-                    ? '⏳ Testing...' 
+                    ? '⏳ Testing ElevenLabs...' 
                     : ttsTestStatus === 'success'
-                    ? '✓ Test Passed!'
+                    ? '✓ ElevenLabs OK!'
                     : ttsTestStatus === 'error'
-                    ? '✗ Test Failed'
-                    : '▶ Test Text-to-Speech'}
+                    ? '✗ ElevenLabs Failed'
+                    : '▶ Test ElevenLabs TTS'}
+                </button>
+
+                {/* OpenAI Test Button */}
+                <button
+                  onClick={async () => {
+                    if (!isOpenAIConfigured()) {
+                      alert('OpenAI API key not configured. Set OPENAI_API_KEY in your .env file.');
+                      return;
+                    }
+                    setOpenaiTestStatus('testing');
+                    const success = await testOpenAI();
+                    setOpenaiTestStatus(success ? 'success' : 'error');
+                  }}
+                  disabled={openaiTestStatus === 'testing' || !isOpenAIConfigured()}
+                  className={`w-full px-4 py-2 border font-mono text-xs transition-all ${
+                    !isOpenAIConfigured()
+                      ? 'border-zinc-700 text-zinc-600 cursor-not-allowed'
+                      : openaiTestStatus === 'testing' 
+                      ? 'border-yellow-500 text-yellow-500 cursor-wait'
+                      : openaiTestStatus === 'success'
+                      ? 'border-green-500 text-green-500'
+                      : openaiTestStatus === 'error'
+                      ? 'border-red-500 text-red-500'
+                      : 'border-green-600 text-green-600 hover:bg-green-900/20'
+                  }`}
+                >
+                  {!isOpenAIConfigured()
+                    ? '⚠ OpenAI Key Not Set'
+                    : openaiTestStatus === 'testing' 
+                    ? '⏳ Testing OpenAI...' 
+                    : openaiTestStatus === 'success'
+                    ? '✓ OpenAI OK!'
+                    : openaiTestStatus === 'error'
+                    ? '✗ OpenAI Failed'
+                    : '▶ Test OpenAI TTS'}
                 </button>
 
                 {/* Sound Effects Test Button */}
                 <button
                   onClick={async () => {
                     if (!isElevenLabsConfigured()) {
-                      alert('ElevenLabs API key not configured. Set ELEVENLABS_API_KEY in your environment.');
+                      alert('ElevenLabs API key not configured. Sound effects require ElevenLabs.');
                       return;
                     }
                     setSfxTestStatus('testing');
@@ -738,7 +808,7 @@ const App: React.FC = () => {
                   }`}
                 >
                   {!isElevenLabsConfigured()
-                    ? '⚠ API Key Not Set'
+                    ? '⚠ Requires ElevenLabs'
                     : sfxTestStatus === 'testing' 
                     ? '⏳ Generating...' 
                     : sfxTestStatus === 'success'
@@ -748,9 +818,11 @@ const App: React.FC = () => {
                     : '🎵 Test Sound Effects'}
                 </button>
                 
-                {!isElevenLabsConfigured() && (
+                {(!isElevenLabsConfigured() || !isOpenAIConfigured()) && (
                   <p className="text-xs font-mono text-zinc-600">
-                    Add ELEVENLABS_API_KEY to your .env file
+                    Add API keys to your .env file:<br/>
+                    {!isElevenLabsConfigured() && '• ELEVENLABS_API_KEY'}<br/>
+                    {!isOpenAIConfigured() && '• OPENAI_API_KEY'}
                   </p>
                 )}
               </div>

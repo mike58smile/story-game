@@ -1,22 +1,53 @@
 // ElevenLabs Text-to-Speech and Sound Effects Service
 // API Reference: https://elevenlabs.io/docs/api-reference/text-to-speech/convert
 // Sound Effects API: https://elevenlabs.io/docs/api-reference/text-to-sound-effects/convert
+// OpenAI TTS API: https://platform.openai.com/docs/guides/text-to-speech
 
 const ELEVENLABS_TTS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 const ELEVENLABS_SFX_URL = 'https://api.elevenlabs.io/v1/sound-generation';
+const OPENAI_TTS_URL = 'https://api.openai.com/v1/audio/speech';
 
 // Default voice ID - "George" (a clear, narrative voice)
 // You can find more voices at: https://elevenlabs.io/docs/api-reference/voices/search
 const DEFAULT_VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb';
 
-// Get API key from environment variables
-const getApiKey = () => process.env.ELEVENLABS_API_KEY || '';
+// OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
+const DEFAULT_OPENAI_VOICE = 'onyx';
+
+// TTS Provider type
+export type TTSProvider = 'elevenlabs' | 'openai';
+
+// Current TTS provider setting
+let currentTTSProvider: TTSProvider = 'elevenlabs';
+
+/**
+ * Set the TTS provider to use
+ */
+export const setTTSProvider = (provider: TTSProvider): void => {
+  currentTTSProvider = provider;
+};
+
+/**
+ * Get the current TTS provider
+ */
+export const getTTSProvider = (): TTSProvider => currentTTSProvider;
+
+// Get API keys from environment variables
+const getElevenLabsApiKey = () => process.env.ELEVENLABS_API_KEY || '';
+const getOpenAIApiKey = () => process.env.OPENAI_API_KEY || '';
 
 interface TextToSpeechOptions {
   voiceId?: string;
   modelId?: string;
   outputFormat?: string;
+  // OpenAI specific
+  openaiVoice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+  openaiModel?: string;
+  openaiInstructions?: string;
 }
+
+// Default OpenAI voice instructions for atmospheric narration
+const DEFAULT_OPENAI_INSTRUCTIONS = "Speak in a mysterious, deep, and atmospheric tone. Your voice should evoke a sense of darkness and intrigue, like a narrator in a surreal horror story. Pause slightly between sentences for dramatic effect. Keep the pace slow and deliberate.";
 
 // Track current audio for stopping
 let currentAudio: HTMLAudioElement | null = null;
@@ -41,20 +72,82 @@ export const stopNarration = (): void => {
  * Check if ElevenLabs API key is configured
  */
 export const isElevenLabsConfigured = (): boolean => {
-  return !!getApiKey();
+  return !!getElevenLabsApiKey();
+};
+
+/**
+ * Check if OpenAI API key is configured
+ */
+export const isOpenAIConfigured = (): boolean => {
+  return !!getOpenAIApiKey();
+};
+
+/**
+ * Check if any TTS provider is configured
+ */
+export const isTTSConfigured = (): boolean => {
+  if (currentTTSProvider === 'openai') {
+    return isOpenAIConfigured();
+  }
+  return isElevenLabsConfigured();
+};
+
+/**
+ * Convert text to speech using OpenAI API
+ */
+const textToSpeechOpenAI = async (
+  text: string,
+  options: TextToSpeechOptions = {}
+): Promise<Blob | null> => {
+  const apiKey = getOpenAIApiKey();
+  if (!apiKey) {
+    console.error('OpenAI API key not configured. Set OPENAI_API_KEY in environment.');
+    return null;
+  }
+
+  const {
+    openaiVoice = DEFAULT_OPENAI_VOICE,
+    openaiModel = 'gpt-4o-mini-tts',
+    openaiInstructions = DEFAULT_OPENAI_INSTRUCTIONS
+  } = options;
+
+  try {
+    const response = await fetch(OPENAI_TTS_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: openaiModel,
+        input: text,
+        voice: openaiVoice,
+        instructions: openaiInstructions
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI TTS API error:', response.status, errorText);
+      return null;
+    }
+
+    const audioBlob = await response.blob();
+    return audioBlob;
+  } catch (error) {
+    console.error('OpenAI TTS error:', error);
+    return null;
+  }
 };
 
 /**
  * Convert text to speech using ElevenLabs API
- * @param text - The text to convert to speech
- * @param options - Optional configuration
- * @returns Audio blob or null if failed
  */
-export const textToSpeech = async (
+const textToSpeechElevenLabs = async (
   text: string,
   options: TextToSpeechOptions = {}
 ): Promise<Blob | null> => {
-  const apiKey = getApiKey();
+  const apiKey = getElevenLabsApiKey();
   if (!apiKey) {
     console.error('ElevenLabs API key not configured. Set ELEVENLABS_API_KEY in environment.');
     return null;
@@ -97,7 +190,23 @@ export const textToSpeech = async (
 };
 
 /**
- * Play text as speech using ElevenLabs API
+ * Convert text to speech using the current provider
+ * @param text - The text to convert to speech
+ * @param options - Optional configuration
+ * @returns Audio blob or null if failed
+ */
+export const textToSpeech = async (
+  text: string,
+  options: TextToSpeechOptions = {}
+): Promise<Blob | null> => {
+  if (currentTTSProvider === 'openai') {
+    return textToSpeechOpenAI(text, options);
+  }
+  return textToSpeechElevenLabs(text, options);
+};
+
+/**
+ * Play text as speech using the current TTS provider
  * @param text - The text to speak
  * @param options - Optional configuration
  * @returns Promise that resolves when audio starts playing
@@ -135,8 +244,8 @@ export const speakText = async (
  * @param text - The game text to narrate
  */
 export const narrateGameText = async (text: string): Promise<void> => {
-  if (!isElevenLabsConfigured()) {
-    console.log('ElevenLabs not configured, skipping narration');
+  if (!isTTSConfigured()) {
+    console.log('TTS not configured, skipping narration');
     return;
   }
 
@@ -154,27 +263,52 @@ export const narrateGameText = async (text: string): Promise<void> => {
 };
 
 /**
+ * Test the current TTS provider
+ * @returns true if test passed, false otherwise
+ */
+export const testTTS = async (): Promise<boolean> => {
+  const provider = currentTTSProvider;
+  console.log(`Testing ${provider} Text-to-Speech API...`);
+  
+  if (!isTTSConfigured()) {
+    console.error(`${provider} API key not configured`);
+    return false;
+  }
+  
+  const testText = `Hello! This is a test of the ${provider === 'openai' ? 'OpenAI' : 'ElevenLabs'} text to speech system. If you can hear this, the integration is working correctly.`;
+  
+  try {
+    await speakText(testText);
+    console.log(`${provider} TTS test successful!`);
+    return true;
+  } catch (error) {
+    console.error(`${provider} TTS test failed:`, error);
+    return false;
+  }
+};
+
+/**
  * Simple test function to verify ElevenLabs API is working
  * @returns true if test passed, false otherwise
  */
 export const testElevenLabs = async (): Promise<boolean> => {
-  console.log('Testing ElevenLabs Text-to-Speech API...');
-  
-  if (!isElevenLabsConfigured()) {
-    console.error('ElevenLabs API key not configured');
-    return false;
-  }
-  
-  const testText = "Hello! This is a test of the ElevenLabs text to speech system. If you can hear this, the integration is working correctly.";
-  
-  try {
-    await speakText(testText);
-    console.log('ElevenLabs test successful!');
-    return true;
-  } catch (error) {
-    console.error('ElevenLabs test failed:', error);
-    return false;
-  }
+  const prevProvider = currentTTSProvider;
+  setTTSProvider('elevenlabs');
+  const result = await testTTS();
+  setTTSProvider(prevProvider);
+  return result;
+};
+
+/**
+ * Simple test function to verify OpenAI TTS API is working
+ * @returns true if test passed, false otherwise
+ */
+export const testOpenAI = async (): Promise<boolean> => {
+  const prevProvider = currentTTSProvider;
+  setTTSProvider('openai');
+  const result = await testTTS();
+  setTTSProvider(prevProvider);
+  return result;
 };
 
 // ============================================
@@ -200,7 +334,7 @@ export const generateSoundEffect = async (
   text: string,
   options: SoundEffectOptions = {}
 ): Promise<Blob | null> => {
-  const apiKey = getApiKey();
+  const apiKey = getElevenLabsApiKey();
   if (!apiKey) {
     console.error('ElevenLabs API key not configured. Set ELEVENLABS_API_KEY in environment.');
     return null;
