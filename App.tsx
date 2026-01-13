@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, ChatMessage, INITIAL_CHAR_LIMIT, CHAR_DECREMENT, SCENARIOS, TEXTS, Language, Difficulty } from './types';
 import { generateStoryTurn, generateSceneImage } from './services/gemini';
 import { soundSystem } from './services/sound';
-import { testElevenLabs, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured } from './services/elevenlabs';
+import { testElevenLabs, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured, playSoundEffect } from './services/elevenlabs';
 import TerminalInput from './components/TerminalInput';
 import GameDisplay from './components/GameDisplay';
 import StatusPanel from './components/StatusPanel';
@@ -28,10 +28,47 @@ const App: React.FC = () => {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [ttsTestStatus, setTtsTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [sfxTestStatus, setSfxTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [narrationEnabled, setNarrationEnabled] = useState(true);
+  const [musicVolume, setMusicVolume] = useState(0.3);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const t = TEXTS[gameState.language];
+
+  // Initialize background music
+  useEffect(() => {
+    bgMusicRef.current = new Audio('/assets/music.mp3');
+    bgMusicRef.current.loop = true;
+    bgMusicRef.current.volume = musicVolume;
+    
+    return () => {
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+        bgMusicRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update volume when slider changes
+  useEffect(() => {
+    if (bgMusicRef.current) {
+      bgMusicRef.current.volume = musicVolume;
+    }
+  }, [musicVolume]);
+
+  // Start/stop music based on game state
+  const toggleMusic = () => {
+    if (!bgMusicRef.current) return;
+    
+    if (isMusicPlaying) {
+      bgMusicRef.current.pause();
+      setIsMusicPlaying(false);
+    } else {
+      bgMusicRef.current.play();
+      setIsMusicPlaying(true);
+    }
+  };
 
   // Language switcher component for the start screen
   const LanguageSwitcher = () => (
@@ -62,6 +99,12 @@ const App: React.FC = () => {
   const startGame = useCallback(async () => {
     // Initialize sound context on user gesture
     soundSystem.playSubmit();
+
+    // Start background music
+    if (bgMusicRef.current && !isMusicPlaying) {
+      bgMusicRef.current.play();
+      setIsMusicPlaying(true);
+    }
 
     const selectedScenario = SCENARIOS.find(s => s.id === gameState.selectedScenarioId) || SCENARIOS[0];
     const lang = gameState.language;
@@ -189,6 +232,11 @@ const App: React.FC = () => {
         soundSystem.playLose();
       } else {
         soundSystem.playReceive();
+      }
+
+      // Play AI-generated sound effect for the scene
+      if (storyResponse.soundEffect && isElevenLabsConfigured()) {
+        playSoundEffect(storyResponse.soundEffect, { durationSeconds: 3 }, 0.4);
       }
 
       // Narrate the AI response
@@ -383,6 +431,35 @@ const App: React.FC = () => {
         <h1 className="text-xl md:text-2xl font-serif-title tracking-wider text-white">ECHOES OF THE VOID</h1>
         
         <div className="flex items-center gap-4">
+          {/* Music Volume Control */}
+          <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 rounded-sm">
+            <button
+              onClick={toggleMusic}
+              title={isMusicPlaying ? 'Pause Music' : 'Play Music'}
+              className={`text-sm transition-colors ${isMusicPlaying ? 'text-emerald-500' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              {isMusicPlaying ? (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.531V19.94a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75Z" />
+                </svg>
+              )}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={musicVolume}
+              onChange={(e) => setMusicVolume(parseFloat(e.target.value))}
+              className="w-16 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              title={`Volume: ${Math.round(musicVolume * 100)}%`}
+            />
+          </div>
+
           {/* Export/Import Buttons */}
           <div className="flex gap-2">
              <button 

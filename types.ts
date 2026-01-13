@@ -37,6 +37,7 @@ export interface StoryResponse {
   inventoryAdd?: string[];
   inventoryRemove?: string[];
   newCharacters?: string[];
+  soundEffect?: string;
 }
 
 export interface Scenario {

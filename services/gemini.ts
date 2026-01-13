@@ -75,6 +75,7 @@ export const generateStoryTurn = async (
        - 'CONTINUE': Story goes on.
     5. Narrative: Provide a concise, atmospheric response (max 2-3 sentences).
     6. Visuals: Provide a descriptive, artistic image prompt for the current scene. Style: "minimalist, ink sketch, high contrast, surreal, noir, etching style".
+    7. Sound: Provide a short sound effect description (e.g., "creaky door opening", "footsteps on gravel", "distant thunder", "sword unsheathing", "eerie whispers") that matches the scene's action or atmosphere.
   `;
 
   try {
@@ -96,8 +97,9 @@ export const generateStoryTurn = async (
             inventoryAdd: { type: Type.ARRAY, items: { type: Type.STRING } },
             inventoryRemove: { type: Type.ARRAY, items: { type: Type.STRING } },
             newCharacters: { type: Type.ARRAY, items: { type: Type.STRING } },
+            soundEffect: { type: Type.STRING },
           },
-          required: ["message", "imagePrompt", "gameStatus"],
+          required: ["message", "imagePrompt", "gameStatus", "soundEffect"],
         },
       },
     });
