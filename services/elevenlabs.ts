@@ -17,7 +17,12 @@ const DEFAULT_VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb';
 const DEFAULT_OPENAI_VOICE = 'onyx';
 
 // Inworld voice options
-const DEFAULT_INWORLD_VOICE = 'Craig';
+export type InworldVoice = 'Craig' | 'Theodore';
+const INWORLD_VOICES: InworldVoice[] = ['Craig', 'Theodore'];
+const DEFAULT_INWORLD_VOICE: InworldVoice = 'Craig';
+
+// Current Inworld voice setting
+let currentInworldVoice: InworldVoice = DEFAULT_INWORLD_VOICE;
 
 // TTS Provider type
 export type TTSProvider = 'elevenlabs' | 'openai' | 'inworld';
@@ -36,6 +41,23 @@ export const setTTSProvider = (provider: TTSProvider): void => {
  * Get the current TTS provider
  */
 export const getTTSProvider = (): TTSProvider => currentTTSProvider;
+
+/**
+ * Set the Inworld voice to use
+ */
+export const setInworldVoice = (voice: InworldVoice): void => {
+  currentInworldVoice = voice;
+};
+
+/**
+ * Get the current Inworld voice
+ */
+export const getInworldVoice = (): InworldVoice => currentInworldVoice;
+
+/**
+ * Get available Inworld voices
+ */
+export const getInworldVoices = (): InworldVoice[] => INWORLD_VOICES;
 
 // Get API keys from environment variables
 const getElevenLabsApiKey = () => process.env.ELEVENLABS_API_KEY || '';
@@ -302,6 +324,11 @@ export const speakText = async (
 ): Promise<void> => {
   // Stop any current narration first
   stopNarration();
+
+  // Use current Inworld voice if not specified
+  if (currentTTSProvider === 'inworld' && !options.inworldVoice) {
+    options = { ...options, inworldVoice: currentInworldVoice };
+  }
 
   const audioBlob = await textToSpeech(text, options);
   

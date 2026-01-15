@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, ChatMessage, INITIAL_CHAR_LIMIT, CHAR_DECREMENT, SCENARIOS, TEXTS, Language, Difficulty } from './types';
 import { generateStoryTurn, generateSceneImage } from './services/gemini';
 import { soundSystem } from './services/sound';
-import { testElevenLabs, testOpenAI, testInworld, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured, isOpenAIConfigured, isInworldConfigured, isTTSConfigured, playSoundEffect, setTTSProvider, getTTSProvider, TTSProvider } from './services/elevenlabs';
+import { testElevenLabs, testOpenAI, testInworld, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured, isOpenAIConfigured, isInworldConfigured, isTTSConfigured, playSoundEffect, setTTSProvider, getTTSProvider, TTSProvider, setInworldVoice, getInworldVoice, getInworldVoices, InworldVoice } from './services/elevenlabs';
 import TerminalInput from './components/TerminalInput';
 import GameDisplay from './components/GameDisplay';
 import StatusPanel from './components/StatusPanel';
@@ -166,6 +166,7 @@ const App: React.FC = () => {
     const urlParams = parseUrlParams() as any;
     return urlParams.ttsProvider || 'elevenlabs';
   });
+  const [inworldVoice, setInworldVoiceState] = useState<InworldVoice>(() => getInworldVoice());
   const [musicVolume, setMusicVolume] = useState(0.3);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const t = TEXTS[gameState.language];
@@ -970,6 +971,31 @@ const App: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Inworld Voice Selection - only show when Inworld is selected */}
+                {ttsProvider === 'inworld' && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-mono text-gray-400">Inworld Voice</span>
+                    <div className="flex gap-2">
+                      {getInworldVoices().map((voice) => (
+                        <button
+                          key={voice}
+                          onClick={() => {
+                            setInworldVoiceState(voice);
+                            setInworldVoice(voice);
+                          }}
+                          className={`flex-1 px-3 py-2 border font-mono text-xs transition-all ${
+                            inworldVoice === voice
+                              ? 'border-orange-500 text-orange-500 bg-orange-900/20'
+                              : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'
+                          }`}
+                        >
+                          {voice}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* ElevenLabs Test Button */}
                 <button
