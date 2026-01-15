@@ -11,7 +11,8 @@ export const generateStoryTurn = async (
   language: Language,
   inventory: string[],
   charactersMet: string[],
-  difficulty: Difficulty
+  difficulty: Difficulty,
+  secrets?: string
 ): Promise<StoryResponse> => {
   const ai = getAI();
 
@@ -21,14 +22,43 @@ export const generateStoryTurn = async (
 
   let difficultyDirective = "";
   
-  if (difficulty === 'HARD') {
+  if (difficulty === 'EASY') {
+    difficultyDirective = `
+    **CRITICAL DIRECTIVE - FORGIVING MODE (Testing):**
+    1. Be generous and helpful. The player should feel guided.
+    2. Accept reasonable actions and provide helpful hints when stuck.
+    3. Rarely use LOSE status - only for extremely reckless actions.
+    4. Progress the story naturally even with vague commands.
+    5. Focus on exploration and discovery over challenge.
+    6. Ideal for testing story paths without frustration.
+    `;
+  } else if (difficulty === 'NORMAL') {
+    difficultyDirective = `
+    **CRITICAL DIRECTIVE - BALANCED MODE:**
+    1. Provide a fair, atmospheric text adventure experience.
+    2. Challenges should be logical and solvable with reasonable effort.
+    3. Accept creative solutions and reward clever thinking.
+    4. Mistakes have consequences but are recoverable.
+    5. Focus on atmosphere and story progression with some tension.
+    `;
+  } else if (difficulty === 'CHALLENGING') {
+    difficultyDirective = `
+    **CRITICAL DIRECTIVE - CHALLENGING MODE (Default):**
+    1. The world is dangerous but fair. Careful thinking is rewarded.
+    2. Simple direct actions may work, but complications can arise.
+    3. NPCs and obstacles are competent - they don't just let the player succeed.
+    4. Require the player to think and plan, but don't punish excessively.
+    5. Create tension and stakes while keeping solutions achievable.
+    6. Balance between atmosphere, story, and meaningful challenge.
+    `;
+  } else if (difficulty === 'HARD') {
     difficultyDirective = `
     **CRITICAL DIRECTIVE - UNFORGIVING MODE:**
     1. The world is hostile and actively resists the player.
     2. Do NOT allow the player to succeed easily. Simple, direct actions to achieve the goal should often fail, be blocked, or introduce a new complication.
     3. Specifically for 'Slay the Princess': The Princess is not a passive victim. She argues, deceives, fights back, or changes. The cabin might be a trap.
-    4. Punish mistakes and rushing.
-    5. Be harsh but fair.
+    4. Punish mistakes and rushing harshly.
+    5. Be harsh but technically fair - solutions exist but are hard to find.
     `;
   } else if (difficulty === 'JOKE') {
     difficultyDirective = `
@@ -39,15 +69,32 @@ export const generateStoryTurn = async (
     4. The world is surreal and absurd. Logic is optional.
     5. Be funny, slightly antagonistic, but ultimately engaging.
     `;
-  } else { // NORMAL
+  } else if (difficulty === 'DEBUG') {
     difficultyDirective = `
-    **CRITICAL DIRECTIVE - BALANCED MODE:**
-    1. Provide a standard, atmospheric text adventure experience.
-    2. Challenges should be logical and solvable.
-    3. Do not be overly punishing, but do not hand out victory for free.
-    4. Focus on atmosphere and story progression.
+    **CRITICAL DIRECTIVE - DEBUG MODE (Testing):**
+    1. You are a helpful testing assistant. Always explain your reasoning.
+    2. After your narrative response, add [DEBUG] info:
+       - Why you chose this outcome (WIN/LOSE/CONTINUE)
+       - What the player could have done differently
+       - Internal state considerations
+    3. Never use LOSE unless player explicitly requests it.
+    4. Be transparent about game mechanics and AI decision-making.
+    5. Help testers understand the game's logic.
     `;
   }
+
+  // Build secrets directive if secrets exist
+  const secretsDirective = secrets ? `
+    **HIDDEN STORY SECRETS (The player does NOT know these - they must discover them!):**
+    ${secrets}
+    
+    IMPORTANT: 
+    - Do NOT reveal secrets directly. Let the player discover them through investigation, dialogue, and choices.
+    - If the player takes actions that align with discovering secrets, provide subtle hints.
+    - The stated goal may be a FALSE goal. True victory requires understanding the hidden truths.
+    - React dynamically based on whether the player follows the obvious path or questions reality.
+    - If player achieves the stated goal without discovering secrets, it may not be a TRUE win (consider the cycle continuing).
+  ` : '';
 
   const systemInstruction = `
     You are the narrator of a dark, surreal, minimalist text adventure game.
@@ -61,6 +108,7 @@ export const generateStoryTurn = async (
     - Player Constraint: Ability to communicate/act is fading. They only had ${charLimit} characters to describe their action: "${userInput}".
     
     ${difficultyDirective}
+    ${secretsDirective}
 
     Your task:
     1. Analyze the user's input. If the input is "..." or silence, interpret it as the player waiting, observing, or hesitating.
@@ -70,7 +118,7 @@ export const generateStoryTurn = async (
        - If the player uses/loses an item, add it to 'inventoryRemove'.
        - If the player meets a NEW named character or significant entity, add their name to 'newCharacters'.
     4. Determine Game Status:
-       - 'WIN': Goal achieved.
+       - 'WIN': Goal achieved (but consider if it's a TRUE win based on secrets).
        - 'LOSE': Player dies, fails significantly, or cannot proceed.
        - 'CONTINUE': Story goes on.
     5. Narrative: Provide a concise, atmospheric response (max 2-3 sentences).

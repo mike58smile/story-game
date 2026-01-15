@@ -47,7 +47,7 @@ interface TextToSpeechOptions {
 }
 
 // Default OpenAI voice instructions for atmospheric narration
-const DEFAULT_OPENAI_INSTRUCTIONS = "Speak in a mysterious, deep, and atmospheric tone. Your voice should evoke a sense of darkness and intrigue, like a narrator in a surreal horror story. Pause slightly between sentences for dramatic effect. Keep the pace slow and deliberate.";
+const DEFAULT_OPENAI_INSTRUCTIONS = "Speak in narrative tone, atmospheric, make pauses when necessary, speak storytelling. Be mysterious yet melodic.";
 
 // Track current audio for stopping
 let currentAudio: HTMLAudioElement | null = null;
@@ -107,7 +107,7 @@ const textToSpeechOpenAI = async (
 
   const {
     openaiVoice = DEFAULT_OPENAI_VOICE,
-    openaiModel = 'gpt-4o-mini-tts',
+    openaiModel = 'gpt-4o-mini-tts-2025-03-20',
     openaiInstructions = DEFAULT_OPENAI_INSTRUCTIONS
   } = options;
 

@@ -24,7 +24,7 @@ const App: React.FC = () => {
     charGiftChance: 15,
     isTimerActive: false,
     timerDuration: null,
-    difficulty: 'HARD'
+    difficulty: 'CHALLENGING'
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -172,6 +172,10 @@ const App: React.FC = () => {
       // 2. Call AI
       const historyForAI = gameState.history.map(m => ({ role: m.role, text: m.text }));
       
+      // Get current scenario secrets
+      const currentScenario = SCENARIOS.find(s => s.id === gameState.selectedScenarioId);
+      const scenarioSecrets = currentScenario?.secrets?.[gameState.language];
+      
       const storyResponse = await generateStoryTurn(
         historyForAI,
         userInput,
@@ -180,7 +184,8 @@ const App: React.FC = () => {
         gameState.language,
         gameState.inventory,
         gameState.charactersMet,
-        gameState.difficulty
+        gameState.difficulty,
+        scenarioSecrets
       );
 
       // 3. Prepare AI Response
@@ -575,7 +580,7 @@ const App: React.FC = () => {
                   <div className="space-y-2 mb-6">
                     <div className="text-xs font-mono text-gray-400">{t.difficultySelect}</div>
                     <div className="flex flex-col gap-2">
-                        {(['HARD', 'NORMAL', 'JOKE'] as Difficulty[]).map(diff => (
+                        {(['EASY', 'NORMAL', 'CHALLENGING', 'HARD', 'JOKE', 'DEBUG'] as Difficulty[]).map(diff => (
                           <button
                             key={diff}
                             onClick={() => setGameState(prev => ({...prev, difficulty: diff}))}
@@ -585,7 +590,11 @@ const App: React.FC = () => {
                               : 'border-zinc-700 text-gray-500 hover:border-zinc-500'
                             }`}
                           >
-                            {diff === 'HARD' ? t.diffHard : diff === 'NORMAL' ? t.diffNormal : t.diffJoke}
+                            {diff === 'EASY' ? t.diffEasy : 
+                             diff === 'NORMAL' ? t.diffNormal : 
+                             diff === 'CHALLENGING' ? t.diffChallenging :
+                             diff === 'HARD' ? t.diffHard : 
+                             diff === 'JOKE' ? t.diffJoke : t.diffDebug}
                           </button>
                         ))}
                     </div>

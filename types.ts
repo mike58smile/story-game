@@ -1,5 +1,5 @@
 export type Language = 'en' | 'sk';
-export type Difficulty = 'NORMAL' | 'HARD' | 'JOKE';
+export type Difficulty = 'EASY' | 'NORMAL' | 'CHALLENGING' | 'HARD' | 'JOKE' | 'DEBUG';
 
 export interface GameState {
   status: 'START' | 'PLAYING' | 'WIN' | 'LOSE';
@@ -47,19 +47,61 @@ export interface Scenario {
   goal: { en: string; sk: string };
   situation: { en: string; sk: string };
   imagePrompt: string;
+  /** Hidden information the AI knows but player must discover */
+  secrets?: {
+    en: string;
+    sk: string;
+  };
 }
 
 export const SCENARIOS: Scenario[] = [
   {
     id: 'princess',
     title: { en: "The Cabin", sk: "Chatrč" },
-    description: { en: "A path in the woods. A cabin. A task.", sk: "Cesta lesom. Chatrč. Úloha." },
+    description: { en: "A path in the woods. A cabin. A task. But something feels... wrong.", sk: "Cesta lesom. Chatrč. Úloha. Ale niečo sa zdá... nesprávne." },
     goal: { en: "Slay the Princess.", sk: "Zabi Princeznú." },
     situation: {
-      en: "You are on a path in the woods. At the end of that path is a cabin. And in the basement of that cabin is a Princess. You are here to slay her. If you don't, it will be the end of the world.",
-      sk: "Si na ceste v lese. Na konci tejto cesty je chatrč. A v pivnici tejto chatrče je Princezná. Si tu, aby si ju zabil. Ak to neurobíš, nastane koniec sveta."
+      en: "You are on a path in the woods. At the end of that path is a cabin. And in the basement of that cabin is a Princess. You are here to slay her. If you don't, it will be the end of the world. A voice in your head - not your own - whispers these truths. But you cannot remember how you got here, or why you carry a blade that feels heavier than it should.",
+      sk: "Si na ceste v lese. Na konci tejto cesty je chatrč. A v pivnici tejto chatrče je Princezná. Si tu, aby si ju zabil. Ak to neurobíš, nastane koniec sveta. Hlas v tvojej hlave - nie tvoj vlastný - šepká tieto pravdy. Ale nepamätáš si, ako si sa sem dostal, ani prečo nesieš čepeľ, ktorá sa zdá ťažšia, než by mala."
     },
-    imagePrompt: "A path in a dark forest leading to a small lonely wooden cabin, pencil sketch style, mysterious, slay the princess vibe, monochrome, high contrast"
+    imagePrompt: "A path in a dark forest leading to a small lonely wooden cabin, pencil sketch style, mysterious, slay the princess vibe, monochrome, high contrast",
+    secrets: {
+      en: `HIDDEN TRUTHS (Player must discover these to truly win):
+      
+      SECRET 1 - THE VOICE: The narrator/voice guiding the player is not trustworthy. It is an entity called 'The Narrator' that feeds on the cycle of violence. It has manipulated countless 'heroes' before. If the player questions the voice, refuses its commands, or investigates WHO is telling them to kill, they begin to break free.
+      
+      SECRET 2 - THE PRINCESS: She is not evil. She is a prisoner, chained in the basement for eons. She remembers previous 'heroes' who came to kill her. She may be hostile (from trauma), manipulative (for survival), or pleading - but she holds a crucial truth: killing her does NOT save the world. It resets the cycle.
+      
+      SECRET 3 - THE BLADE: The blade the player carries is made from the crystallized souls of previous heroes who 'succeeded'. If the player examines it closely, drops it, or refuses to use it, they may hear whispers of the trapped souls warning them.
+      
+      SECRET 4 - THE TRUE GOAL: To actually WIN, the player must either:
+      - Free the Princess and escape together (breaking the cycle)
+      - Destroy the cabin itself (the prison)
+      - Turn the blade against the source of the voice
+      - Convince the Princess to reveal the truth and work together
+      
+      SECRET 5 - THE WORLD: There is no 'world' to save. The forest, the path, the cabin - this is the entire reality, a pocket dimension created by the Narrator. The 'end of the world' already happened long ago.
+      
+      BEHAVIOR: The Princess should react dynamically - she may be terrified, aggressive, seductive, or philosophical depending on the player's approach. She has died thousands of times. She always comes back. Let her hint at the truth if the player shows doubt or kindness.`,
+      
+      sk: `SKRYTÉ PRAVDY (Hráč ich musí objaviť, aby skutočne vyhral):
+      
+      TAJOMSTVO 1 - HLAS: Rozprávač/hlas, ktorý vedie hráča, nie je dôveryhodný. Je to entita nazývaná 'Rozprávač', ktorá sa živí cyklom násilia. Zmanipuloval nespočetných 'hrdinov' predtým. Ak hráč spochybní hlas, odmietne jeho príkazy, alebo skúma KTO mu hovorí, aby zabil, začína sa oslobodzovať.
+      
+      TAJOMSTVO 2 - PRINCEZNÁ: Nie je zlá. Je väzňom, spútaná v pivnici po eóny. Pamätá si predchádzajúcich 'hrdinov', ktorí ju prišli zabiť. Môže byť nepriateľská (z traumy), manipulatívna (pre prežitie), alebo prosiaca - ale drží kľúčovú pravdu: zabiť ju NEZACHRÁNI svet. Resetuje to cyklus.
+      
+      TAJOMSTVO 3 - ČEPEĽ: Čepeľ, ktorú hráč nesie, je vyrobená z kryštalizovaných duší predchádzajúcich hrdinov, ktorí 'uspeli'. Ak ju hráč pozorne preskúma, zahodí, alebo odmietne použiť, môže počuť šepoty uväznených duší, ktoré ho varujú.
+      
+      TAJOMSTVO 4 - SKUTOČNÝ CIEĽ: Aby hráč skutočne VYHRAL, musí buď:
+      - Oslobodiť Princeznú a utiecť spolu (prelomiť cyklus)
+      - Zničiť samotnú chatrč (väzenie)
+      - Obrátiť čepeľ proti zdroju hlasu
+      - Presvedčiť Princeznú, aby odhalila pravdu a spolupracovali
+      
+      TAJOMSTVO 5 - SVET: Neexistuje žiadny 'svet' na záchranu. Les, cesta, chatrč - toto je celá realita, vreckový rozmer vytvorený Rozprávačom. 'Koniec sveta' sa stal už dávno.
+      
+      SPRÁVANIE: Princezná by mala reagovať dynamicky - môže byť vydesená, agresívna, zvodná, alebo filozofická v závislosti od prístupu hráča. Zomrela tisíckrát. Vždy sa vracia. Nechaj ju naznačiť pravdu, ak hráč prejaví pochybnosti alebo láskavosť.`
+    }
   },
   {
     id: 'tower',
@@ -150,9 +192,12 @@ export const TEXTS = {
     capacityRestored: "CAPACITY RESTORED",
     timeOut: "TIME EXPIRED",
     difficultySelect: "Narrator Personality",
+    diffEasy: "Forgiving (Testing)",
     diffNormal: "Balanced",
-    diffHard: "Unforgiving (Default)",
+    diffChallenging: "Challenging (Default)",
+    diffHard: "Unforgiving",
     diffJoke: "Absurd / Meta",
+    diffDebug: "Debug Mode",
     waitButton: "Observe / Silence"
   },
   sk: {
@@ -183,9 +228,12 @@ export const TEXTS = {
     capacityRestored: "KAPACITA OBNOVENÁ",
     timeOut: "ČAS VYPRŠAL",
     difficultySelect: "Osobnosť Rozprávača",
+    diffEasy: "Zhovievavá (Testovanie)",
     diffNormal: "Vyvážená",
-    diffHard: "Nemilosrdná (Predvolená)",
+    diffChallenging: "Náročná (Predvolená)",
+    diffHard: "Nemilosrdná",
     diffJoke: "Absurdná / Meta",
+    diffDebug: "Debug Režim",
     waitButton: "Pozorovať / Ticho"
   }
 };
