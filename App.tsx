@@ -7,33 +7,164 @@ import TerminalInput from './components/TerminalInput';
 import GameDisplay from './components/GameDisplay';
 import StatusPanel from './components/StatusPanel';
 
+// URL Parameter parsing helper
+const parseUrlParams = (): Partial<GameState> & { autostart?: boolean } => {
+  const params = new URLSearchParams(window.location.search);
+  const result: Partial<GameState> & { autostart?: boolean } = {};
+
+  // Language
+  const lang = params.get('lang');
+  if (lang === 'en' || lang === 'sk') {
+    result.language = lang;
+  }
+
+  // Scenario
+  const scenario = params.get('scenario');
+  if (scenario && SCENARIOS.find(s => s.id === scenario)) {
+    result.selectedScenarioId = scenario;
+  }
+
+  // Difficulty
+  const difficulty = params.get('difficulty');
+  if (difficulty && ['EASY', 'NORMAL', 'CHALLENGING', 'HARD', 'JOKE', 'DEBUG'].includes(difficulty.toUpperCase())) {
+    result.difficulty = difficulty.toUpperCase() as Difficulty;
+  }
+
+  // Character limit
+  const charLimit = params.get('charLimit');
+  if (charLimit) {
+    const limit = parseInt(charLimit, 10);
+    if (!isNaN(limit) && limit >= 10 && limit <= 200) {
+      result.charLimit = limit;
+    }
+  }
+
+  // Char decrement (entropy rate)
+  const charDecrement = params.get('entropy');
+  if (charDecrement) {
+    const decrement = parseInt(charDecrement, 10);
+    if (!isNaN(decrement) && decrement >= 0 && decrement <= 20) {
+      result.charDecrement = decrement;
+    }
+  }
+
+  // Time pressure chance
+  const timePressure = params.get('timePressure');
+  if (timePressure) {
+    const pressure = parseInt(timePressure, 10);
+    if (!isNaN(pressure) && pressure >= 0 && pressure <= 100) {
+      result.timePressureChance = pressure;
+    }
+  }
+
+  // Char gift chance
+  const charGift = params.get('charGift');
+  if (charGift) {
+    const gift = parseInt(charGift, 10);
+    if (!isNaN(gift) && gift >= 0 && gift <= 100) {
+      result.charGiftChance = gift;
+    }
+  }
+
+  // Auto-start
+  if (params.get('autostart') === 'true' || params.get('autostart') === '1') {
+    result.autostart = true;
+  }
+
+  // Button-start (minimal UI with just start button)
+  if (params.get('buttonStart') === 'true' || params.get('buttonStart') === '1') {
+    (result as any).buttonStart = true;
+  }
+
+  // Narration enabled
+  const narration = params.get('narration');
+  if (narration === 'true' || narration === '1') {
+    (result as any).narrationEnabled = true;
+  } else if (narration === 'false' || narration === '0') {
+    (result as any).narrationEnabled = false;
+  }
+
+  // Sound effects enabled
+  const sfx = params.get('sfx');
+  if (sfx === 'true' || sfx === '1') {
+    (result as any).sfxEnabled = true;
+  } else if (sfx === 'false' || sfx === '0') {
+    (result as any).sfxEnabled = false;
+  }
+
+  // TTS Provider
+  const tts = params.get('tts');
+  if (tts === 'elevenlabs' || tts === 'openai') {
+    (result as any).ttsProvider = tts;
+  }
+
+  return result;
+};
+
+// Generate shareable URL from current settings
+const generateShareableUrl = (state: GameState, narrationEnabled: boolean, sfxEnabled: boolean, ttsProvider: TTSProvider): string => {
+  const baseUrl = window.location.origin + window.location.pathname;
+  const params = new URLSearchParams();
+  
+  params.set('scenario', state.selectedScenarioId);
+  params.set('lang', state.language);
+  params.set('difficulty', state.difficulty);
+  params.set('charLimit', state.charLimit.toString());
+  params.set('entropy', state.charDecrement.toString());
+  params.set('timePressure', state.timePressureChance.toString());
+  params.set('charGift', state.charGiftChance.toString());
+  params.set('narration', narrationEnabled.toString());
+  params.set('sfx', sfxEnabled.toString());
+  params.set('tts', ttsProvider);
+  
+  return `${baseUrl}?${params.toString()}`;
+};
+
 const App: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState>({
-    status: 'START',
-    language: 'en',
-    history: [],
-    charLimit: INITIAL_CHAR_LIMIT,
-    charDecrement: CHAR_DECREMENT,
-    currentGoal: "",
-    selectedScenarioId: SCENARIOS[0].id,
-    turnCount: 0,
-    isLoading: false,
-    inventory: [],
-    charactersMet: [],
-    timePressureChance: 50,
-    charGiftChance: 15,
-    isTimerActive: false,
-    timerDuration: null,
-    difficulty: 'CHALLENGING'
+  const [gameState, setGameState] = useState<GameState>(() => {
+    // Initialize with URL params if present
+    const urlParams = parseUrlParams();
+    return {
+      status: 'START',
+      language: urlParams.language || 'en',
+      history: [],
+      charLimit: urlParams.charLimit ?? INITIAL_CHAR_LIMIT,
+      charDecrement: urlParams.charDecrement ?? CHAR_DECREMENT,
+      currentGoal: "",
+      selectedScenarioId: urlParams.selectedScenarioId || SCENARIOS[0].id,
+      turnCount: 0,
+      isLoading: false,
+      inventory: [],
+      charactersMet: [],
+      timePressureChance: urlParams.timePressureChance ?? 50,
+      charGiftChance: urlParams.charGiftChance ?? 15,
+      isTimerActive: false,
+      timerDuration: null,
+      difficulty: urlParams.difficulty || 'CHALLENGING'
+    };
   });
+  
+  const [shouldAutostart, setShouldAutostart] = useState(() => parseUrlParams().autostart || false);
+  const [buttonStartMode, setButtonStartMode] = useState(() => (parseUrlParams() as any).buttonStart || false);
+  const [linkCopied, setLinkCopied] = useState<'none' | 'link' | 'autostart' | 'button'>('none');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [ttsTestStatus, setTtsTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [openaiTestStatus, setOpenaiTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [sfxTestStatus, setSfxTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [narrationEnabled, setNarrationEnabled] = useState(true);
-  const [ttsProvider, setTtsProviderState] = useState<TTSProvider>('elevenlabs');
+  const [narrationEnabled, setNarrationEnabled] = useState(() => {
+    const urlParams = parseUrlParams() as any;
+    return urlParams.narrationEnabled !== undefined ? urlParams.narrationEnabled : true;
+  });
+  const [sfxEnabled, setSfxEnabled] = useState(() => {
+    const urlParams = parseUrlParams() as any;
+    return urlParams.sfxEnabled !== undefined ? urlParams.sfxEnabled : true;
+  });
+  const [ttsProvider, setTtsProviderState] = useState<TTSProvider>(() => {
+    const urlParams = parseUrlParams() as any;
+    return urlParams.ttsProvider || 'elevenlabs';
+  });
   const [musicVolume, setMusicVolume] = useState(0.3);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const t = TEXTS[gameState.language];
@@ -150,6 +281,44 @@ const App: React.FC = () => {
     }));
   }, [gameState.language, gameState.selectedScenarioId, narrationEnabled]);
 
+  // Auto-start game if URL parameter is set
+  useEffect(() => {
+    if (shouldAutostart && gameState.status === 'START') {
+      setShouldAutostart(false);
+      startGame();
+    }
+  }, [shouldAutostart, gameState.status, startGame]);
+
+  // Copy shareable URL to clipboard
+  const copyShareableUrl = useCallback(() => {
+    const url = generateShareableUrl(gameState, narrationEnabled, sfxEnabled, ttsProvider);
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied('link');
+      setTimeout(() => setLinkCopied('none'), 2000);
+      console.log('URL copied:', url);
+    });
+  }, [gameState, narrationEnabled, sfxEnabled, ttsProvider]);
+
+  // Copy shareable URL with autostart
+  const copyShareableUrlWithAutostart = useCallback(() => {
+    const url = generateShareableUrl(gameState, narrationEnabled, sfxEnabled, ttsProvider) + '&autostart=true';
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied('autostart');
+      setTimeout(() => setLinkCopied('none'), 2000);
+      console.log('URL with autostart copied:', url);
+    });
+  }, [gameState, narrationEnabled, sfxEnabled, ttsProvider]);
+
+  // Copy URL with all settings but showing only a start button
+  const copyButtonStartUrl = useCallback(() => {
+    const url = generateShareableUrl(gameState, narrationEnabled, sfxEnabled, ttsProvider) + '&buttonStart=true';
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied('button');
+      setTimeout(() => setLinkCopied('none'), 2000);
+      console.log('Button-start URL copied:', url);
+    });
+  }, [gameState, narrationEnabled, sfxEnabled, ttsProvider]);
+
   const handleTurn = async (userInput: string) => {
     if (gameState.isLoading || gameState.status !== 'PLAYING') return;
 
@@ -242,7 +411,7 @@ const App: React.FC = () => {
       }
 
       // Play AI-generated sound effect for the scene
-      if (storyResponse.soundEffect && isElevenLabsConfigured()) {
+      if (sfxEnabled && storyResponse.soundEffect && isElevenLabsConfigured()) {
         playSoundEffect(storyResponse.soundEffect, { durationSeconds: 3 }, 0.4);
       }
 
@@ -505,6 +674,20 @@ const App: React.FC = () => {
         />
 
         {gameState.status === 'START' ? (
+          buttonStartMode ? (
+            // Minimal Button-Start Mode: Only show a single start button
+            <div className="flex-1 flex flex-col items-center justify-center p-8 animate-fade-in">
+              <button 
+                onClick={() => {
+                  setButtonStartMode(false);
+                  startGame();
+                }}
+                className="px-12 py-6 border-2 border-emerald-500 text-emerald-400 font-mono text-xl hover:bg-emerald-900/20 hover:text-emerald-300 transition-all duration-300 tracking-widest uppercase"
+              >
+                {t.startTheGame}
+              </button>
+            </div>
+          ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8 animate-fade-in w-full">
             <div className="space-y-4 max-w-lg">
               <p className="text-xl font-serif-title italic text-gray-400">
@@ -659,6 +842,43 @@ const App: React.FC = () => {
                           className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-purple-400"
                       />
                   </div>
+
+                  {/* Share Configuration */}
+                  <div className="space-y-2 pt-4 border-t border-zinc-800">
+                      <div className="text-xs font-mono text-gray-400">{t.shareConfig}</div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={copyShareableUrl}
+                          className={`flex-1 px-3 py-2 text-xs font-mono border transition-all ${
+                            linkCopied === 'link'
+                              ? 'border-emerald-500 text-emerald-500 bg-emerald-900/20'
+                              : 'border-zinc-700 text-gray-400 hover:border-cyan-500 hover:text-cyan-500'
+                          }`}
+                        >
+                          {linkCopied === 'link' ? `✓ ${t.linkCopied}` : `📋 ${t.copyLink}`}
+                        </button>
+                        <button
+                          onClick={copyShareableUrlWithAutostart}
+                          className={`flex-1 px-3 py-2 text-xs font-mono border transition-all ${
+                            linkCopied === 'autostart'
+                              ? 'border-emerald-500 text-emerald-500 bg-emerald-900/20'
+                              : 'border-zinc-700 text-gray-400 hover:border-cyan-500 hover:text-cyan-500'
+                          }`}
+                        >
+                          {linkCopied === 'autostart' ? `✓ ${t.linkCopied}` : `▶ ${t.copyLinkAutostart}`}
+                        </button>
+                      </div>
+                      <button
+                        onClick={copyButtonStartUrl}
+                        className={`w-full px-3 py-2 text-xs font-mono border transition-all ${
+                          linkCopied === 'button'
+                            ? 'border-emerald-500 text-emerald-500 bg-emerald-900/20'
+                            : 'border-zinc-700 text-gray-400 hover:border-yellow-500 hover:text-yellow-500'
+                        }`}
+                      >
+                        {linkCopied === 'button' ? `✓ ${t.linkCopied}` : `🔘 ${t.copyLinkButton}`}
+                      </button>
+                  </div>
               </div>
               
               <button 
@@ -671,12 +891,12 @@ const App: React.FC = () => {
               {/* Voice Narration Section */}
               <div className="w-full border border-zinc-800 bg-zinc-900/50 p-4 rounded-sm space-y-3 backdrop-blur-sm shadow-lg">
                 <h3 className="text-xs font-mono tracking-widest text-blue-500 border-b border-zinc-800 pb-2">
-                  🔊 Voice Narration
+                  🔊 Audio Settings
                 </h3>
                 
                 {/* Narration Toggle */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-400">Enable narration during game</span>
+                  <span className="text-xs font-mono text-gray-400">{t.enableNarration}</span>
                   <button
                     onClick={() => setNarrationEnabled(!narrationEnabled)}
                     className={`px-3 py-1 border font-mono text-xs transition-all ${
@@ -686,6 +906,21 @@ const App: React.FC = () => {
                     }`}
                   >
                     {narrationEnabled ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                {/* Sound Effects Toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-gray-400">{t.enableSfx}</span>
+                  <button
+                    onClick={() => setSfxEnabled(!sfxEnabled)}
+                    className={`px-3 py-1 border font-mono text-xs transition-all ${
+                      sfxEnabled
+                        ? 'border-purple-500 text-purple-500 bg-purple-900/20'
+                        : 'border-zinc-600 text-zinc-500'
+                    }`}
+                  >
+                    {sfxEnabled ? 'ON' : 'OFF'}
                   </button>
                 </div>
 
@@ -837,6 +1072,7 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
+          )
         ) : (
           <>
             <GameDisplay history={gameState.history} />

@@ -198,7 +198,15 @@ export const TEXTS = {
     diffHard: "Unforgiving",
     diffJoke: "Absurd / Meta",
     diffDebug: "Debug Mode",
-    waitButton: "Observe / Silence"
+    waitButton: "Observe / Silence",
+    shareConfig: "Share Configuration",
+    copyLink: "Copy Link",
+    copyLinkAutostart: "Copy Link (Auto-start)",
+    copyLinkButton: "Copy Link (Button-start)",
+    linkCopied: "Link copied!",
+    startTheGame: "Start the Game",
+    enableNarration: "Voice narration",
+    enableSfx: "Sound effects"
   },
   sk: {
     placeholder: "Čo urobíš?",
@@ -234,6 +242,14 @@ export const TEXTS = {
     diffHard: "Nemilosrdná",
     diffJoke: "Absurdná / Meta",
     diffDebug: "Debug Režim",
-    waitButton: "Pozorovať / Ticho"
+    waitButton: "Pozorovať / Ticho",
+    shareConfig: "Zdieľať Konfiguráciu",
+    copyLink: "Kopírovať Odkaz",
+    copyLinkAutostart: "Kopírovať Odkaz (Auto-štart)",
+    copyLinkButton: "Kopírovať Odkaz (Tlačidlo-štart)",
+    linkCopied: "Odkaz skopírovaný!",
+    startTheGame: "Spustiť Hru",
+    enableNarration: "Hlasové rozprávanie",
+    enableSfx: "Zvukové efekty"
   }
 };
