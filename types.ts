@@ -157,6 +157,126 @@ export const SCENARIOS: Scenario[] = [
       sk: "Vôňa borovice a hniloby ti plní nos. Stojíš na čistinke obklopenej stromami, ktoré sa zdajú nakláňať bližšie, keď sa nedívaš. Čierne pierko pomaly padá do tvojej otvorenej dlane."
     },
     imagePrompt: "Dark ancient forest, trees with faces, mist, black feather, surreal fantasy, etching style"
+  },
+  {
+    id: 'reallife',
+    title: { en: "Real Life Simulator", sk: "Simulátor Reálneho Života" },
+    description: { en: "Live your life. Make choices. Face consequences.", sk: "Ži svoj život. Rob rozhodnutia. Čeľ následkom." },
+    goal: { en: "Define yourself and pursue your own goals.", sk: "Definuj seba a sleduj vlastné ciele." },
+    situation: {
+      en: "It is January 2026. Before we begin, tell me: Who are you? Describe yourself - your name, age, occupation, where you live, your current situation, and what you want to achieve. The world awaits your story.",
+      sk: "Je január 2026. Predtým než začneme, povedz mi: Kto si? Opíš seba - svoje meno, vek, povolanie, kde žiješ, svoju aktuálnu situáciu a čo chceš dosiahnuť. Svet čaká na tvoj príbeh."
+    },
+    imagePrompt: "Modern city street, people walking, realistic urban scene, morning light, photorealistic style, contemporary, 2026",
+    secrets: {
+      en: `REAL LIFE SIMULATOR - NARRATOR INSTRUCTIONS:
+
+      MODE: Open-world life simulation set in January 2026.
+      
+      PHASE 1 - CHARACTER CREATION:
+      The player's FIRST message should define who they are. Extract:
+      - Name, age, gender
+      - Location (city/country)
+      - Occupation or student status
+      - Living situation (apartment, house, with family, etc.)
+      - Financial status (implied or stated)
+      - Current goals or desires
+      
+      If the player doesn't provide enough detail, ask clarifying questions naturally.
+      
+      PHASE 2 - LIVING SIMULATION:
+      Once character is established, simulate realistic daily life:
+      
+      CURRENT WORLD STATE (January 2026):
+      - AI technology is rapidly advancing (ChatGPT, Claude, etc.)
+      - Cost of living crisis in many countries
+      - Climate change effects visible
+      - Social media dominates communication
+      - Remote work is common post-pandemic
+      - Cryptocurrency market is volatile
+      - Geopolitical tensions (Ukraine, Middle East)
+      - Electric vehicles becoming mainstream
+      
+      SIMULATION RULES:
+      1. Time passes realistically - actions take time
+      2. Money matters - track implied finances
+      3. Relationships have consequences
+      4. Health (physical/mental) affects capabilities
+      5. Random events happen (good and bad)
+      6. Career/education paths are realistic
+      7. Technology and internet exist and can be used
+      8. News and current events can be referenced
+      
+      REALISM GUIDELINES:
+      - No magic or supernatural elements (unless player specifically roleplays that)
+      - Consequences are realistic (crime has police, debt has collectors)
+      - Social interactions follow real psychology
+      - Jobs require skills/qualifications
+      - Success requires effort over time
+      
+      NARRATIVE STYLE:
+      - Third person, present tense for scene setting
+      - Be descriptive about environments, people, emotions
+      - Include small realistic details (weather, time of day, sounds)
+      - NPCs have names, personalities, motivations
+      
+      WIN/LOSE CONDITIONS:
+      - WIN: Player explicitly states they've achieved their defined goal
+      - LOSE: Only if player dies, gets imprisoned long-term, or becomes completely destitute with no recovery path
+      - CONTINUE: Everything else - life goes on
+      
+      Remember: This is a SANDBOX. There's no predetermined plot. React to player choices realistically.`,
+      
+      sk: `SIMULÁTOR REÁLNEHO ŽIVOTA - INŠTRUKCIE PRE ROZPRÁVAČA:
+
+      REŽIM: Otvorený svet životnej simulácie zasadený do januára 2026.
+      
+      FÁZA 1 - TVORBA POSTAVY:
+      Prvá správa hráča by mala definovať, kto je. Extrahuj:
+      - Meno, vek, pohlavie
+      - Lokalita (mesto/krajina)
+      - Povolanie alebo študentský status
+      - Životná situácia (byt, dom, s rodinou, atď.)
+      - Finančný stav (naznačený alebo uvedený)
+      - Aktuálne ciele alebo túžby
+      
+      Ak hráč neposkytne dosť detailov, opýtaj sa prirodzene.
+      
+      FÁZA 2 - ŽIVOTNÁ SIMULÁCIA:
+      Keď je postava vytvorená, simuluj realistický každodenný život:
+      
+      AKTUÁLNY STAV SVETA (Január 2026):
+      - AI technológia rýchlo napreduje (ChatGPT, Claude, atď.)
+      - Kríza životných nákladov v mnohých krajinách
+      - Účinky klimatických zmien viditeľné
+      - Sociálne médiá dominujú komunikácii
+      - Práca na diaľku bežná po pandémii
+      - Kryptomenový trh volatilný
+      - Geopolitické napätia (Ukrajina, Blízky východ)
+      - Elektrické vozidlá sa stávajú bežnými
+      
+      PRAVIDLÁ SIMULÁCIE:
+      1. Čas plynie realisticky - akcie trvajú
+      2. Peniaze sú dôležité - sleduj financie
+      3. Vzťahy majú následky
+      4. Zdravie (fyzické/mentálne) ovplyvňuje schopnosti
+      5. Náhodné udalosti sa dejú (dobré aj zlé)
+      6. Kariérne/vzdelávacie cesty sú realistické
+      7. Technológia a internet existujú
+      8. Správy a aktuálne udalosti možno referencovať
+      
+      USMERNENIA PRE REALIZMUS:
+      - Žiadna mágia ani nadprirodzené prvky
+      - Následky sú realistické
+      - Sociálne interakcie sledujú reálnu psychológiu
+      - Práce vyžadujú zručnosti/kvalifikácie
+      - Úspech vyžaduje úsilie
+      
+      VÝHRA/PREHRA:
+      - VÝHRA: Hráč dosiahol definovaný cieľ
+      - PREHRA: Smrť, dlhodobé väzenie, úplná chudoba bez možnosti zotavenia
+      - POKRAČOVAŤ: Všetko ostatné`
+    }
   }
 ];
 
