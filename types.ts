@@ -61,8 +61,8 @@ export const SCENARIOS: Scenario[] = [
     description: { en: "A path in the woods. A cabin. A task. But something feels... wrong.", sk: "Cesta lesom. Chatrč. Úloha. Ale niečo sa zdá... nesprávne." },
     goal: { en: "Slay the Princess.", sk: "Zabi Princeznú." },
     situation: {
-      en: "You are on a path in the woods. At the end of that path is a cabin. And in the basement of that cabin is a Princess. You are here to slay her. If you don't, it will be the end of the world. A voice in your head - not your own - whispers these truths. But you cannot remember how you got here, or why you carry a blade that feels heavier than it should.",
-      sk: "Si na ceste v lese. Na konci tejto cesty je chatrč. A v pivnici tejto chatrče je Princezná. Si tu, aby si ju zabil. Ak to neurobíš, nastane koniec sveta. Hlas v tvojej hlave - nie tvoj vlastný - šepká tieto pravdy. Ale nepamätáš si, ako si sa sem dostal, ani prečo nesieš čepeľ, ktorá sa zdá ťažšia, než by mala."
+      en: "You are on a path in the woods. At the end of that path is a cabin. And in the basement of that cabin is a Princess. You are here to slay her. If you don't, it will be the end of the world.",
+      sk: "Si na ceste v lese. Na konci tejto cesty je chatrč. A v pivnici tejto chatrče je Princezná. Si tu, aby si ju zabil. Ak to neurobíš, nastane koniec sveta."
     },
     imagePrompt: "A path in a dark forest leading to a small lonely wooden cabin, pencil sketch style, mysterious, slay the princess vibe, monochrome, high contrast",
     secrets: {
