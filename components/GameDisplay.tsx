@@ -6,16 +6,28 @@ interface GameDisplayProps {
 }
 
 const GameDisplay: React.FC<GameDisplayProps> = ({ history }) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
+  const prevHistoryLength = useRef(history.length);
 
+  // Scroll to the beginning of the last message when a new message arrives
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history]);
+    if (history.length > prevHistoryLength.current) {
+      lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    prevHistoryLength.current = history.length;
+  }, [history.length]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-8 space-y-12 max-w-2xl mx-auto w-full scroll-smooth">
-      {history.map((msg, idx) => (
-        <div key={idx} className={`animate-fade-in-up transition-all duration-500`}>
+      {history.map((msg, idx) => {
+        const isLastMessage = idx === history.length - 1;
+        
+        return (
+        <div 
+          key={idx} 
+          ref={isLastMessage ? lastMessageRef : null}
+          className={`animate-fade-in-up transition-all duration-500 scroll-mt-24`}
+        >
           {/* Text Content */}
           <div className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
             <span className={`text-xs uppercase tracking-widest ${msg.role === 'user' ? 'text-gray-500' : 'text-emerald-700'}`}>
@@ -38,7 +50,7 @@ const GameDisplay: React.FC<GameDisplayProps> = ({ history }) => {
                   <img 
                     src={msg.imageUrl} 
                     alt="Scene visualization" 
-                    className="w-full h-full object-cover grayscale contrast-125 hover:contrast-100 transition-all duration-700 animate-fade-in" 
+                    className="w-full h-full object-cover grayscale contrast-125 hover:contrast-100 transition-all duration-700 animate-fade-in"
                   />
                 ) : msg.isImageLoading ? (
                   <div className="flex flex-col items-center gap-2">
@@ -55,8 +67,8 @@ const GameDisplay: React.FC<GameDisplayProps> = ({ history }) => {
             </div>
           )}
         </div>
-      ))}
-      <div ref={bottomRef} />
+        );
+      })}
     </div>
   );
 };
