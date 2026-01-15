@@ -171,7 +171,7 @@ const App: React.FC = () => {
 
   // Initialize background music
   useEffect(() => {
-    bgMusicRef.current = new Audio('/assets/music.mp3');
+    bgMusicRef.current = new Audio('/music.mp3');
     bgMusicRef.current.loop = true;
     bgMusicRef.current.volume = musicVolume;
     
