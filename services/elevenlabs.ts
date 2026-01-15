@@ -2,10 +2,12 @@
 // API Reference: https://elevenlabs.io/docs/api-reference/text-to-speech/convert
 // Sound Effects API: https://elevenlabs.io/docs/api-reference/text-to-sound-effects/convert
 // OpenAI TTS API: https://platform.openai.com/docs/guides/text-to-speech
+// Inworld AI TTS API: https://docs.inworld.ai/
 
 const ELEVENLABS_TTS_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 const ELEVENLABS_SFX_URL = 'https://api.elevenlabs.io/v1/sound-generation';
 const OPENAI_TTS_URL = 'https://api.openai.com/v1/audio/speech';
+const INWORLD_TTS_URL = 'https://api.inworld.ai/tts/v1/voice';
 
 // Default voice ID - "George" (a clear, narrative voice)
 // You can find more voices at: https://elevenlabs.io/docs/api-reference/voices/search
@@ -14,8 +16,11 @@ const DEFAULT_VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb';
 // OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
 const DEFAULT_OPENAI_VOICE = 'onyx';
 
+// Inworld voice options
+const DEFAULT_INWORLD_VOICE = 'Craig';
+
 // TTS Provider type
-export type TTSProvider = 'elevenlabs' | 'openai';
+export type TTSProvider = 'elevenlabs' | 'openai' | 'inworld';
 
 // Current TTS provider setting
 let currentTTSProvider: TTSProvider = 'elevenlabs';
@@ -35,6 +40,7 @@ export const getTTSProvider = (): TTSProvider => currentTTSProvider;
 // Get API keys from environment variables
 const getElevenLabsApiKey = () => process.env.ELEVENLABS_API_KEY || '';
 const getOpenAIApiKey = () => process.env.OPENAI_API_KEY || '';
+const getInworldApiKey = () => process.env.INWORLD_API_KEY || '';
 
 interface TextToSpeechOptions {
   voiceId?: string;
@@ -44,6 +50,10 @@ interface TextToSpeechOptions {
   openaiVoice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
   openaiModel?: string;
   openaiInstructions?: string;
+  // Inworld specific
+  inworldVoice?: string;
+  inworldSpeakingRate?: number;
+  inworldTemperature?: number;
 }
 
 // Default OpenAI voice instructions for atmospheric narration
@@ -83,11 +93,21 @@ export const isOpenAIConfigured = (): boolean => {
 };
 
 /**
+ * Check if Inworld API key is configured
+ */
+export const isInworldConfigured = (): boolean => {
+  return !!getInworldApiKey();
+};
+
+/**
  * Check if any TTS provider is configured
  */
 export const isTTSConfigured = (): boolean => {
   if (currentTTSProvider === 'openai') {
     return isOpenAIConfigured();
+  }
+  if (currentTTSProvider === 'inworld') {
+    return isInworldConfigured();
   }
   return isElevenLabsConfigured();
 };
@@ -190,6 +210,68 @@ const textToSpeechElevenLabs = async (
 };
 
 /**
+ * Convert text to speech using Inworld AI API
+ */
+const textToSpeechInworld = async (
+  text: string,
+  options: TextToSpeechOptions = {}
+): Promise<Blob | null> => {
+  const apiKey = getInworldApiKey();
+  if (!apiKey) {
+    console.error('Inworld API key not configured. Set INWORLD_API_KEY in environment.');
+    return null;
+  }
+
+  const {
+    inworldVoice = DEFAULT_INWORLD_VOICE,
+    inworldSpeakingRate = 0.87,
+    inworldTemperature = 0.84
+  } = options;
+
+  try {
+    const response = await fetch(INWORLD_TTS_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text,
+        voice_id: inworldVoice,
+        audio_config: {
+          audio_encoding: 'MP3',
+          speaking_rate: inworldSpeakingRate
+        },
+        temperature: inworldTemperature,
+        model_id: 'inworld-tts-1'
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Inworld TTS API error:', response.status, errorText);
+      return null;
+    }
+
+    const result = await response.json();
+    const audioContent = result.audioContent;
+    
+    // Convert base64 to Blob
+    const binaryString = atob(audioContent);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const audioBlob = new Blob([bytes], { type: 'audio/mp3' });
+    
+    return audioBlob;
+  } catch (error) {
+    console.error('Inworld TTS error:', error);
+    return null;
+  }
+};
+
+/**
  * Convert text to speech using the current provider
  * @param text - The text to convert to speech
  * @param options - Optional configuration
@@ -201,6 +283,9 @@ export const textToSpeech = async (
 ): Promise<Blob | null> => {
   if (currentTTSProvider === 'openai') {
     return textToSpeechOpenAI(text, options);
+  }
+  if (currentTTSProvider === 'inworld') {
+    return textToSpeechInworld(text, options);
   }
   return textToSpeechElevenLabs(text, options);
 };
@@ -275,7 +360,8 @@ export const testTTS = async (): Promise<boolean> => {
     return false;
   }
   
-  const testText = `Hello! This is a test of the ${provider === 'openai' ? 'OpenAI' : 'ElevenLabs'} text to speech system. If you can hear this, the integration is working correctly.`;
+  const providerName = provider === 'openai' ? 'OpenAI' : provider === 'inworld' ? 'Inworld' : 'ElevenLabs';
+  const testText = `Hello! This is a test of the ${providerName} text to speech system. If you can hear this, the integration is working correctly.`;
   
   try {
     await speakText(testText);
@@ -306,6 +392,18 @@ export const testElevenLabs = async (): Promise<boolean> => {
 export const testOpenAI = async (): Promise<boolean> => {
   const prevProvider = currentTTSProvider;
   setTTSProvider('openai');
+  const result = await testTTS();
+  setTTSProvider(prevProvider);
+  return result;
+};
+
+/**
+ * Simple test function to verify Inworld TTS API is working
+ * @returns true if test passed, false otherwise
+ */
+export const testInworld = async (): Promise<boolean> => {
+  const prevProvider = currentTTSProvider;
+  setTTSProvider('inworld');
   const result = await testTTS();
   setTTSProvider(prevProvider);
   return result;

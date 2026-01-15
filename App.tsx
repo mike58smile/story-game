@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, ChatMessage, INITIAL_CHAR_LIMIT, CHAR_DECREMENT, SCENARIOS, TEXTS, Language, Difficulty } from './types';
 import { generateStoryTurn, generateSceneImage } from './services/gemini';
 import { soundSystem } from './services/sound';
-import { testElevenLabs, testOpenAI, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured, isOpenAIConfigured, isTTSConfigured, playSoundEffect, setTTSProvider, getTTSProvider, TTSProvider } from './services/elevenlabs';
+import { testElevenLabs, testOpenAI, testInworld, testSoundEffects, narrateGameText, stopNarration, isElevenLabsConfigured, isOpenAIConfigured, isInworldConfigured, isTTSConfigured, playSoundEffect, setTTSProvider, getTTSProvider, TTSProvider } from './services/elevenlabs';
 import TerminalInput from './components/TerminalInput';
 import GameDisplay from './components/GameDisplay';
 import StatusPanel from './components/StatusPanel';
@@ -94,7 +94,7 @@ const parseUrlParams = (): Partial<GameState> & { autostart?: boolean } => {
 
   // TTS Provider
   const tts = params.get('tts');
-  if (tts === 'elevenlabs' || tts === 'openai') {
+  if (tts === 'elevenlabs' || tts === 'openai' || tts === 'inworld') {
     (result as any).ttsProvider = tts;
   }
 
@@ -152,6 +152,7 @@ const App: React.FC = () => {
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [ttsTestStatus, setTtsTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [openaiTestStatus, setOpenaiTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [inworldTestStatus, setInworldTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [sfxTestStatus, setSfxTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [narrationEnabled, setNarrationEnabled] = useState(() => {
     const urlParams = parseUrlParams() as any;
@@ -927,7 +928,7 @@ const App: React.FC = () => {
                 {/* TTS Provider Selection */}
                 <div className="space-y-2">
                   <span className="text-xs font-mono text-gray-400">TTS Provider</span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => {
                         setTtsProviderState('elevenlabs');
@@ -953,6 +954,19 @@ const App: React.FC = () => {
                       }`}
                     >
                       OpenAI {isOpenAIConfigured() ? '✓' : ''}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTtsProviderState('inworld');
+                        setTTSProvider('inworld');
+                      }}
+                      className={`flex-1 px-3 py-2 border font-mono text-xs transition-all ${
+                        ttsProvider === 'inworld'
+                          ? 'border-orange-500 text-orange-500 bg-orange-900/20'
+                          : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'
+                      }`}
+                    >
+                      Inworld {isInworldConfigured() ? '✓' : ''}
                     </button>
                   </div>
                 </div>
@@ -1027,6 +1041,41 @@ const App: React.FC = () => {
                     : '▶ Test OpenAI TTS'}
                 </button>
 
+                {/* Inworld Test Button */}
+                <button
+                  onClick={async () => {
+                    if (!isInworldConfigured()) {
+                      alert('Inworld API key not configured. Set INWORLD_API_KEY in your .env file.');
+                      return;
+                    }
+                    setInworldTestStatus('testing');
+                    const success = await testInworld();
+                    setInworldTestStatus(success ? 'success' : 'error');
+                  }}
+                  disabled={inworldTestStatus === 'testing' || !isInworldConfigured()}
+                  className={`w-full px-4 py-2 border font-mono text-xs transition-all ${
+                    !isInworldConfigured()
+                      ? 'border-zinc-700 text-zinc-600 cursor-not-allowed'
+                      : inworldTestStatus === 'testing' 
+                      ? 'border-yellow-500 text-yellow-500 cursor-wait'
+                      : inworldTestStatus === 'success'
+                      ? 'border-green-500 text-green-500'
+                      : inworldTestStatus === 'error'
+                      ? 'border-red-500 text-red-500'
+                      : 'border-cyan-500 text-cyan-500 hover:bg-cyan-900/20'
+                  }`}
+                >
+                  {!isInworldConfigured()
+                    ? '⚠ Inworld Key Not Set'
+                    : inworldTestStatus === 'testing' 
+                    ? '⏳ Testing Inworld...' 
+                    : inworldTestStatus === 'success'
+                    ? '✓ Inworld OK!'
+                    : inworldTestStatus === 'error'
+                    ? '✗ Inworld Failed'
+                    : '▶ Test Inworld TTS'}
+                </button>
+
                 {/* Sound Effects Test Button */}
                 <button
                   onClick={async () => {
@@ -1062,11 +1111,12 @@ const App: React.FC = () => {
                     : '🎵 Test Sound Effects'}
                 </button>
                 
-                {(!isElevenLabsConfigured() || !isOpenAIConfigured()) && (
+                {(!isElevenLabsConfigured() || !isOpenAIConfigured() || !isInworldConfigured()) && (
                   <p className="text-xs font-mono text-zinc-600">
                     Add API keys to your .env file:<br/>
-                    {!isElevenLabsConfigured() && '• ELEVENLABS_API_KEY'}<br/>
-                    {!isOpenAIConfigured() && '• OPENAI_API_KEY'}
+                    {!isElevenLabsConfigured() && <span>• ELEVENLABS_API_KEY<br/></span>}
+                    {!isOpenAIConfigured() && <span>• OPENAI_API_KEY<br/></span>}
+                    {!isInworldConfigured() && <span>• INWORLD_API_KEY</span>}
                   </p>
                 )}
               </div>
