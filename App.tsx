@@ -171,6 +171,11 @@ const App: React.FC = () => {
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const t = TEXTS[gameState.language];
 
+  // Sync TTS provider with the elevenlabs service (handles URL params on init)
+  useEffect(() => {
+    setTTSProvider(ttsProvider);
+  }, [ttsProvider]);
+
   // Initialize background music
   useEffect(() => {
     bgMusicRef.current = new Audio('/music.mp3');
