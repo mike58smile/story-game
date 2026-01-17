@@ -62,7 +62,9 @@ const TerminalInput: React.FC<TerminalInputProps> = ({ charLimit, onSubmit, disa
   }, [timeLeft, disabled, input, onSubmit]);
 
   useEffect(() => {
-    if (!disabled && inputRef.current) {
+    // Don't auto-focus on mobile to prevent keyboard from popping up
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (!disabled && inputRef.current && !isMobile) {
       inputRef.current.focus();
     }
   }, [disabled]);
@@ -138,7 +140,6 @@ const TerminalInput: React.FC<TerminalInputProps> = ({ charLimit, onSubmit, disa
             className={`w-full bg-transparent border-none outline-none font-mono text-lg text-white placeholder-gray-700 ${shake ? 'animate-pulse' : ''}`}
             placeholder={disabled ? t.processing : isTimerActive ? "HURRY..." : t.placeholder}
             autoComplete="off"
-            autoFocus
           />
           
           <div className={`ml-4 font-mono text-sm font-bold ${
